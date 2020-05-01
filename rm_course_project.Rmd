@@ -1,0 +1,141 @@
+---
+title: "\\vspace{-3.0cm} Regression models course project"
+author: "Georgy Makarov"
+date: "April 29, 2020"
+geometry: "left=2cm, right=2cm, top=2cm, bottom=2cm"
+output: pdf_document
+---
+
+\vspace{-1.5cm}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+## Executive summary
+
+This report explores *Motor Trend* magazine's data set of a collection of cars 
+in order to find out, which is better for fuel consumption - manual transmission 
+or automatic transmission. Cars with manual transmission on average have 7.2 
+higher *MPG* than cars with automatic. Transmission type explains 36% of 
+variance in *MPG*. Other variables like number of cylinders, power and weight 
+are more important to *MPG* than the transmission. The real difference in 
+transmission types is only 1.8 MPG.
+
+## Exploratory data analysis
+
+The data set contains 32 observations of 11 variables. All variables are 
+numeric. There are five variables, which are better to consider as factor 
+variables: *cyl, vs, am, gear, carb*. The distribution of cars by *MPG* is right 
+skewed. The majority of cars has fuel consumption between 15 and 20 MPG. The 
+cars are mostly represented by 8-cylinder cars with automatic transmission. A car 
+transmission usually has 3 gears. Supporting information is in the appendix in 
+the *Figure 1*.
+
+```{r data summary}
+data(mtcars)
+mtcars$cyl <- as.factor(mtcars$cyl)
+mtcars$vs <- as.factor(mtcars$vs)
+mtcars$am <- as.factor(mtcars$am)
+mtcars$gear <- as.factor(mtcars$gear)
+mtcars$carb <- as.factor(mtcars$carb)
+summary(mtcars$mpg)
+```
+
+Cars with manual transmission consume less fuel. The median of *MPG* for manual
+transmission is around 23, while for automatic transmission it is around 17. The
+reference is in the *Figure 2*.
+
+## Regression models
+
+*H~0~*: automatic and manual transimissions *MPG* are the same. We test the *H~0~*
+with a t-test. *P-value* of the test is 0.001, confidence interval does not 
+contain zero - there is enough evidence to reject *H~0~*.
+
+```{r ttest}
+at <- mtcars[mtcars$am == 0,]
+mt <- mtcars[mtcars$am == 1,]
+t.test(at$mpg, mt$mpg)$p.value
+t.test(at$mpg, mt$mpg)$conf
+```
+
+Linear regression model with *am* as a predictor quantifies the difference 
+between transmissions. *P-values* are significant - average *MPG* for automatic
+transmission is 17.1, for manual - 7.2 higher than the automatic. The model
+explains 36% of the variance in *MPG* as the *R^2^* is 0.36. We need more 
+variables to explain the variance.
+
+```{r regr model}
+fit1 <- lm(mpg ~ am, data = mtcars)
+summary(fit1)$coeff
+summary(fit1)$r.squared
+```
+
+One way to choose top predictors is using the *step* function. Top predictors 
+are *cyl, hp, wt, am*.
+
+```{r choose predictos}
+fit_full <- lm(mpg ~ ., data = mtcars)
+step_fit <- step(fit_full, trace = 0)
+summary(step_fit)$coeff
+```
+
+*P-values* for **multivariate regression** are statistically significant. The
+*R^2^* for this model is 0.866. This model shows that manual transmission improves
+fuel consumption by 1.81 MPG, while increase in number of cylinders from 4 to 6
+causes 3.0 MPG loss. Engines with 8 cylinders eat another 2.2 MPG. Every 
+additional *hp* results in decreasing the MPG by 0.03. Every 1000 lbs of weight 
+decrease the MPG by 2.5 US gallons.
+
+```{r multivariate regr}
+fit4 <- lm(mpg ~ am + cyl + hp + wt, data = mtcars)
+summary(fit4)$r.squared
+```
+
+The model with four predictors fits better than the model with transmission 
+type only. The *anova* test shows the significance of *p-value*.
+
+```{r choose model}
+anova(fit1, fit4)
+```
+
+## Residuals and diagnostics
+
+Residuals check and model diagnostics are in the *Figure 3*. *Residual vs Fitted* 
+plot shows that the residuals are independent. *Normal Q-Q* plot shows normal
+distribution of residuals. Residuals on *Scale-Location* plot are randomly 
+distributed. There are no outliers as the dots on *Residuals vs Leverage* plot
+are within [-0.5;+0.5] interval.
+
+\pagebreak
+
+## Appendix
+
+```{r, echo=FALSE, fig.align="center", fig.width=6, fig.height=6, fig.cap="Distribution"}
+par(mfrow = c(2, 2))
+hist(mtcars$mpg, main = "Histogram of mpg", col = "skyblue", xlab = "MPG")
+barplot(table(mtcars$cyl), main = "Histogram of number of cylinders",
+        xlab = "Number of cylinders", ylab = "Frequency", col = "skyblue")
+barplot(table(mtcars$am), main = "Histogram of transmission type", 
+        col = "skyblue", xlab = "Transmission type", ylab = "Frequency")
+barplot(table(mtcars$gear), main = "Histogram of gears", 
+        col = "skyblue", xlab = "Number of gears", ylab = "Frequency")
+```
+
+```{r, echo=FALSE, fig.align="center", fig.width=6, fig.height=6, fig.cap="Transmission type"}
+par(mfrow = c(1, 1))
+boxplot(mpg ~ am, data = mtcars, xlab = "Transmission type", col = "skyblue")
+```
+
+```{r, echo=FALSE, , fig.align="center", fig.width=6, fig.height=6, fig.cap="Residuals"}
+par(mfrow = c(2, 2))
+plot(fit4)
+```
+
+
+
+
+
+
+
